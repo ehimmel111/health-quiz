@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>五維度健康自我評估</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --primary: #4A7C9E;
+    --primary-light: #6B9FBF;
+    --primary-dark: #2D5F82;
+    --accent: #7CB3A0;
+    --bg: #F7F5F2;
+    --card: #FFFFFF;
+    --text: #2C3E50;
+    --text-light: #6B7B8D;
+    --green: #4CAF7D;
+    --yellow: #F0B429;
+    --orange: #E07B2C;
+    --red: #D94F4F;
+    --border-radius: 16px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans TC', 'PingFang TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCREENS */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ===== INTRO SCREEN ===== */
+  #screen-intro {
+    background: linear-gradient(160deg, #2D5F82 0%, #4A7C9E 45%, #7CB3A0 100%);
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .intro-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 28px;
+    display: inline-block;
+  }
+  .intro-title {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .intro-sub {
+    color: rgba(255,255,255,0.85);
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 36px;
+    max-width: 320px;
+  }
+  .dimension-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .chip {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  .meta-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .meta-item {
+    text-align: center;
+    color: rgba(255,255,255,0.9);
+  }
+  .meta-num { font-size: 22px; font-weight: 700; color: #fff; }
+  .meta-label { font-size: 11px; margin-top: 2px; }
+  .btn-start {
+    background: #fff;
+    color: var(--primary-dark);
+    font-size: 17px;
+    font-weight: 700;
+    padding: 16px 48px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    transition: transform 0.15s, box-shadow 0.15s;
+    width: 100%;
+    max-width: 300px;
+  }
+  .btn-start:active { transform: scale(0.97); }
+  .intro-footer {
+    color: rgba(255,255,255,0.55);
+    font-size: 11px;
+    margin-top: 20px;
+  }
+
+  /* ===== QUESTION SCREEN ===== */
+  #screen-question {
+    background: var(--bg);
+    padding: 0;
+  }
+  .q-header {
+    background: var(--card);
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .progress-text { font-size: 13px; color: var(--text-light); }
+  .progress-pct { font-size: 13px; font-weight: 600; color: var(--primary); }
+  .progress-bar-wrap {
+    height: 6px;
+    background: #E8EEF2;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 10px;
+    transition: width 0.4s ease;
+  }
+  .dimension-label {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dim-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: inline-block;
+  }
+
+  .q-body {
+    flex: 1;
+    padding: 28px 20px 32px;
+    display: flex;
+    flex-direction: column;
+  }
+  .q-number {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .q-text {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.45;
+    margin-bottom: 28px;
+    color: var(--text);
+  }
+  .options-list { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    background: var(--card);
+    border: 2px solid #E0E8EE;
+    border-radius: var(--border-radius);
+    padding: 16px 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    width: 100%;
+  }
+  .option-btn:active { transform: scale(0.98); }
+  .option-btn.selected {
+    border-color: var(--primary);
+    background: #EDF4F9;
+  }
+  .option-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid #C8D8E4;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-light);
+    transition: all 0.2s;
+  }
+  .option-btn.selected .option-icon {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .option-score-badge {
+    font-size: 10px;
+    background: #F0F4F8;
+    color: var(--text-light);
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .option-btn.selected .option-score-badge {
+    background: var(--primary-light);
+    color: #fff;
+  }
+  .option-content { flex: 1; }
+  .option-text { font-size: 15px; line-height: 1.5; color: var(--text); }
+
+  .q-footer {
+    padding: 0 20px 32px;
+    display: flex;
+    gap: 12px;
+  }
+  .btn-back {
+    background: transparent;
+    border: 2px solid #D0DCE4;
+    color: var(--text-light);
+    padding: 14px 20px;
+    border-radius: 50px;
+    font-size: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn-next {
+    flex: 1;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 15px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s, transform 0.15s;
+    pointer-events: none;
+  }
+  .btn-next.enabled {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .btn-next.enabled:active { transform: scale(0.97); }
+
+  /* ===== RESULT SCREEN ===== */
+  #screen-result {
+    background: var(--bg);
+    overflow-y: auto;
+  }
+  .result-header {
+    padding: 36px 24px 28px;
+    text-align: center;
+    position: relative;
+  }
+  .result-badge-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border-radius: 30px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .result-badge-wrap.green  { background: #E8F8EE; color: #2E7D52; }
+  .result-badge-wrap.yellow { background: #FFF8E0; color: #9A6F00; }
+  .result-badge-wrap.orange { background: #FFF0E5; color: #A04800; }
+  .result-badge-wrap.red    { background: #FDEAEB; color: #9B2335; }
+  .result-score-big {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .result-score-big.green  { color: var(--green); }
+  .result-score-big.yellow { color: var(--yellow); }
+  .result-score-big.orange { color: var(--orange); }
+  .result-score-big.red    { color: var(--red); }
+  .result-score-label { font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
+  .result-title {
+    font-size: 21px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.35;
+  }
+  .result-desc {
+    font-size: 15px;
+    color: var(--text-light);
+    line-height: 1.75;
+    max-width: 340px;
+    margin: 0 auto;
+  }
+
+  .section-card {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    margin: 0 16px 16px;
+    padding: 22px 20px;
+    box-shadow: var(--shadow);
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  /* Radar chart */
+  .chart-container { position: relative; width: 100%; max-width: 280px; margin: 0 auto; }
+
+  /* Dimension bars */
+  .dim-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .dim-bar-row:last-child { margin-bottom: 0; }
+  .dim-bar-name { font-size: 13px; color: var(--text); min-width: 64px; }
+  .dim-bar-wrap { flex: 1; height: 8px; background: #EEF2F5; border-radius: 10px; overflow: hidden; }
+  .dim-bar-fill { height: 100%; border-radius: 10px; transition: width 0.8s ease; }
+  .dim-bar-score { font-size: 13px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
+
+  /* Advice */
+  .advice-box {
+    background: linear-gradient(135deg, #EDF4F9, #F0F9F5);
+    border-left: 4px solid var(--primary);
+    border-radius: 0 12px 12px 0;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .advice-box.orange-border { border-left-color: var(--orange); background: linear-gradient(135deg, #FFF4ED, #FFF9F5); }
+  .advice-box.red-border { border-left-color: var(--red); background: linear-gradient(135deg, #FFF0F0, #FFF5F5); }
+  .advice-box.green-border { border-left-color: var(--green); background: linear-gradient(135deg, #EFF9F2, #F5FDF7); }
+  .advice-box.yellow-border { border-left-color: var(--yellow); background: linear-gradient(135deg, #FFFBEE, #FFFEF5); }
+
+  /* Share card */
+  .share-card {
+    background: linear-gradient(145deg, #2D5F82, #4A7C9E);
+    border-radius: var(--border-radius);
+    margin: 0 16px 16px;
+    padding: 24px 20px;
+    color: #fff;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .share-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 140px; height: 140px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+  .share-card-title { font-size: 11px; letter-spacing: 2px; opacity: 0.7; margin-bottom: 10px; }
+  .share-card-score { font-size: 48px; font-weight: 800; margin-bottom: 4px; }
+  .share-card-label { font-size: 14px; opacity: 0.85; margin-bottom: 16px; }
+  .share-card-dims {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .share-dim { text-align: center; }
+  .share-dim-icon { font-size: 18px; margin-bottom: 2px; }
+  .share-dim-name { font-size: 10px; opacity: 0.7; }
+  .share-dim-val { font-size: 14px; font-weight: 700; }
+
+  .btn-share {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #fff;
+    padding: 12px 28px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+  }
+  .btn-redo {
+    background: var(--card);
+    border: 2px solid #D0DCE4;
+    color: var(--text);
+    padding: 14px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    width: calc(100% - 32px);
+    margin: 0 16px 12px;
+    display: block;
+  }
+  .result-footer {
+    text-align: center;
+    padding: 0 16px 40px;
+    color: var(--text-light);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeInUp 0.4s ease both; }
+  .fade-in-2 { animation: fadeInUp 0.4s ease 0.1s both; }
+  .fade-in-3 { animation: fadeInUp 0.4s ease 0.2s both; }
+  .fade-in-4 { animation: fadeInUp 0.4s ease 0.3s both; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #2C3E50;
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 50px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 999;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== INTRO ===== -->
+<div id="screen-intro" class="screen active">
+  <div class="intro-badge">HEALTH SELF-CHECK</div>
+  <div class="intro-title">五維度<br>健康自我評估</div>
+  <div class="intro-sub">這不是病歷，也不是測試。<br>只是邀請你停下來，<br>誠實問問自己最近還好嗎。</div>
+  <div class="dimension-chips">
+    <span class="chip">🌙 睡眠</span>
+    <span class="chip">🌀 壓力</span>
+    <span class="chip">⚡ 活力</span>
+    <span class="chip">🥗 飲食</span>
+    <span class="chip">💛 情緒</span>
+  </div>
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="meta-num">15</div>
+      <div class="meta-label">道題目</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-num">5</div>
+      <div class="meta-label">分鐘</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-num">4</div>
+      <div class="meta-label">種結果</div>
+    </div>
+  </div>
+  <button class="btn-start" onclick="startQuiz()">開始評估 →</button>
+  <div class="intro-footer">完全匿名 · 不蒐集個資 · 結果僅供參考</div>
+</div>
+
+<!-- ===== QUESTION ===== -->
+<div id="screen-question" class="screen">
+  <div class="q-header">
+    <div class="progress-top">
+      <span class="progress-text" id="progress-text">第 1 題，共 15 題</span>
+      <span class="progress-pct" id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+    </div>
+    <div class="dimension-label">
+      <span class="dim-dot"></span>
+      <span id="dim-label">維度一｜睡眠品質</span>
+    </div>
+  </div>
+  <div class="q-body">
+    <div class="q-number" id="q-number">Q1</div>
+    <div class="q-text" id="q-text"></div>
+    <div class="options-list" id="options-list"></div>
+  </div>
+  <div class="q-footer">
+    <button class="btn-back" id="btn-back" onclick="prevQ()">← 返回</button>
+    <button class="btn-next" id="btn-next" onclick="nextQ()">繼續 →</button>
+  </div>
+</div>
+
+<!-- ===== RESULT ===== -->
+<div id="screen-result" class="screen">
+  <div class="result-header fade-in">
+    <div id="result-badge" class="result-badge-wrap"></div>
+    <div id="result-score" class="result-score-big"></div>
+    <div class="result-score-label">滿分 60 分</div>
+    <div id="result-title" class="result-title"></div>
+    <div id="result-desc" class="result-desc"></div>
+  </div>
+
+  <!-- Radar Chart -->
+  <div class="section-card fade-in-2">
+    <div class="section-title">各維度分析</div>
+    <div class="chart-container">
+      <canvas id="radarChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Dim Bars -->
+  <div class="section-card fade-in-3">
+    <div class="section-title">維度明細</div>
+    <div id="dim-bars"></div>
+  </div>
+
+  <!-- Advice -->
+  <div class="section-card fade-in-4">
+    <div class="section-title">建議與提醒</div>
+    <div id="advice-content"></div>
+  </div>
+
+  <!-- Share Card -->
+  <div class="share-card fade-in-4" id="share-card">
+    <div class="share-card-title">我的健康評估結果</div>
+    <div class="share-card-score" id="sc-score"></div>
+    <div class="share-card-label" id="sc-label"></div>
+    <div class="share-card-dims" id="sc-dims"></div>
+    <button class="btn-share" onclick="shareResult()">
+      <span>📤</span> 分享給在意的人
+    </button>
+  </div>
+
+  <button class="btn-redo" onclick="redoQuiz()">重新評估</button>
+  <div class="result-footer">
+    本評估僅供健康參考，不作為醫療診斷依據。<br>
+    如有疑慮請諮詢專業醫療人員。<br><br>
+    心理健康諮詢專線：1925（安心專線，24小時）
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const QUESTIONS = [
+  { dim: 0, text: "你需要多久才能入睡？", options: [
+    { label: "很快，通常 15 分鐘內", score: 0 },
+    { label: "需要 30 分鐘至 1 小時", score: 2 },
+    { label: "超過 1 小時，或整晚斷斷續續", score: 4 }
+  ]},
+  { dim: 0, text: "你早上醒來的感覺通常是？", options: [
+    { label: "清醒、精神好", score: 0 },
+    { label: "還是疲勞、需要咖啡才能動", score: 2 },
+    { label: "頭很重、口乾，像沒睡一樣", score: 4 }
+  ]},
+  { dim: 0, text: "你是否曾使用任何東西（包含飲料）幫助自己入睡？", options: [
+    { label: "從不", score: 0 },
+    { label: "偶爾（每月少於 3 次）", score: 2 },
+    { label: "幾乎每次睡覺都需要", score: 4 }
+  ]},
+  { dim: 1, text: "過去一個月，你有多頻繁感到壓力「超出負荷」？", options: [
+    { label: "幾乎沒有", score: 0 },
+    { label: "有時候（每週 1–2 次）", score: 2 },
+    { label: "幾乎每天", score: 4 }
+  ]},
+  { dim: 1, text: "當你壓力很大時，你最主要的因應方式是？", options: [
+    { label: "運動、冥想、找人說話", score: 0 },
+    { label: "滑手機、追劇、吃東西等分散注意力", score: 2 },
+    { label: "抽菸、飲酒、或任何讓自己麻木的方式", score: 4 }
+  ]},
+  { dim: 1, text: "你覺得自己有辦法在壓力環境中保持穩定嗎？", options: [
+    { label: "是，我有足夠的因應資源", score: 0 },
+    { label: "有時候可以，有時候無法", score: 2 },
+    { label: "幾乎無法，感覺被壓垮", score: 4 }
+  ]},
+  { dim: 2, text: "你在下午 2–4 點的精神狀態通常如何？", options: [
+    { label: "精力充沛，持續專注", score: 0 },
+    { label: "有點疲憊，但還撐得住", score: 2 },
+    { label: "明顯想睡，很難集中", score: 4 }
+  ]},
+  { dim: 2, text: "你是否曾因為身體狀況（疲勞、不舒服）而取消社交或活動？", options: [
+    { label: "幾乎沒有（每月 0–1 次）", score: 0 },
+    { label: "偶爾（每月 2–4 次）", score: 2 },
+    { label: "頻繁（幾乎每週）", score: 4 }
+  ]},
+  { dim: 2, text: "過去一個月，你有以下狀況嗎？", options: [
+    { label: "身體狀態不錯", score: 0 },
+    { label: "偶爾胃不舒服或噁心", score: 2 },
+    { label: "手抖、心跳快或莫名出汗", score: 4 }
+  ]},
+  { dim: 3, text: "你每天的液體補充主要來源是？", options: [
+    { label: "白開水為主", score: 0 },
+    { label: "混合（水 + 咖啡 + 飲料）", score: 2 },
+    { label: "幾乎靠飲料、咖啡、或酒精飲料", score: 4 }
+  ]},
+  { dim: 3, text: "你一週內喝含酒精飲料的頻率大約是？", options: [
+    { label: "不喝，或偶爾（每月 1–2 次）", score: 0 },
+    { label: "每週 1–2 次", score: 1 },
+    { label: "每週 3–5 次", score: 2 },
+    { label: "幾乎每天（一週 6 天以上）", score: 3 },
+    { label: "每天，且通常超過 1 次", score: 4 }
+  ]},
+  { dim: 3, text: "你多久會有一次需要吃、喝或服用某樣東西才能放鬆的感覺？", options: [
+    { label: "幾乎沒有", score: 0 },
+    { label: "偶爾，壓力大的時候", score: 2 },
+    { label: "經常，且會為此感到焦慮", score: 4 }
+  ]},
+  { dim: 4, text: "過去一個月，你感到情緒低落、空虛或提不起勁的頻率？", options: [
+    { label: "幾乎沒有", score: 0 },
+    { label: "每週 1–2 次", score: 2 },
+    { label: "幾乎每天", score: 4 }
+  ]},
+  { dim: 4, text: "你生命中重要的人（家人、伴侶、朋友）是否曾表達對你某些習慣或狀態的擔憂？", options: [
+    { label: "從未提過", score: 0 },
+    { label: "提過一兩次", score: 2 },
+    { label: "多次提及，或因此造成關係緊張", score: 4 }
+  ]},
+  { dim: 4, text: "你是否有在一天開始之前，就已經需要某樣東西讓自己「進入正常狀態」？", options: [
+    { label: "不需要", score: 0 },
+    { label: "偶爾需要咖啡或特定儀式", score: 2 },
+    { label: "是，缺少了它這一天就無法正常運作", score: 4 }
+  ]}
+];
+
+const DIMS = [
+  { name: "睡眠", icon: "🌙", color: "#4A7C9E" },
+  { name: "壓力", icon: "🌀", color: "#7CB3A0" },
+  { name: "活力", icon: "⚡", color: "#F0B429" },
+  { name: "飲食", icon: "🥗", color: "#E07B2C" },
+  { name: "情緒", icon: "💛", color: "#D94F4F" }
+];
+
+const RESULTS = {
+  green: {
+    badge: "🟢 整體狀態良好",
+    cls: "green",
+    title: "整體狀態良好",
+    desc: "你目前的身心系統維持得相當不錯。找出分數最高的那個維度，做針對性的優化即可。",
+    advice: `<div class="advice-box green-border">
+      ✨ 你的各項指標都在健康範圍內。<br><br>
+      建議找出分數相對較高的維度，做一個小小的「優化實驗」——可能是睡眠前的手機使用，或是壓力大時的第一反應方式。<br><br>
+      繼續保持，你值得這份狀態。
+    </div>`,
+    color: "#4CAF7D"
+  },
+  yellow: {
+    badge: "🟡 有些訊號值得關注",
+    cls: "yellow",
+    title: "有些訊號值得關注",
+    desc: "你的身體正在用某種方式告訴你：有件事需要多一點注意。不是警報，是邀請你多花點時間在自己身上。",
+    advice: `<div class="advice-box yellow-border">
+      📓 建議：試著追蹤一週的睡眠與壓力日記，看看模式在哪裡。<br><br>
+      你可能已經習慣了某種「不太好的感覺」，以為那就是正常。這個評估是一個邀請，讓你重新認識自己現在的狀態。<br><br>
+      如果某個維度分數特別高，可以優先從那裡開始調整。
+    </div>`,
+    color: "#F0B429"
+  },
+  orange: {
+    badge: "🟠 多個系統出現壓力訊號",
+    cls: "orange",
+    title: "多個系統出現壓力訊號",
+    desc: "不只一個維度出現疲態，這表示你的身心整合性負擔已經相對重了。單靠意志力撐下去可能越來越難。",
+    advice: `<div class="advice-box orange-border">
+      💬 建議：考慮諮詢家醫科或職場健康管理師，做完整評估。<br><br>
+      許多人在這個分段開始的調整，後來都說「早點來就好了」。<br><br>
+      這不是軟弱，是你的系統在告訴你：需要外部支持了。
+    </div>
+    <div class="advice-box orange-border">
+      📞 你可以從這裡開始：<br>
+      • 安心專線 1925（24小時免費）<br>
+      • 各縣市社區心理衛生中心<br>
+      • 家醫科或精神科門診
+    </div>`,
+    color: "#E07B2C"
+  },
+  red: {
+    badge: "🔴 身心系統正在發出警報",
+    cls: "red",
+    title: "身心系統正在發出警報",
+    desc: "這個分數代表的是：你已經承受了太多，你的身體一直很努力地在支撐你。",
+    advice: `<div class="advice-box red-border">
+      🤝 這不是「想開一點」就能解決的。是你的身體在說：我需要幫助。<br><br>
+      台灣各地有提供免費、保密的心理健康與健康諮詢管道，只需要一通電話或一次預約。<br><br>
+      你不需要獨自承擔這一切。
+    </div>
+    <div class="advice-box red-border">
+      📞 立即可用的資源：<br>
+      • <strong>安心專線 1925</strong>（24小時免費，保密）<br>
+      • <strong>自殺防治專線 1925</strong><br>
+      • 各地區醫院精神科門診<br>
+      • 高醫岡山醫院精神科：(07) 626-1000
+    </div>`,
+    color: "#D94F4F"
+  }
+};
+
+let current = 0;
+let answers = new Array(15).fill(null);
+let radarChart = null;
+
+function getLevel(score) {
+  if (score <= 12) return 'green';
+  if (score <= 24) return 'yellow';
+  if (score <= 36) return 'orange';
+  return 'red';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function startQuiz() {
+  current = 0;
+  answers = new Array(15).fill(null);
+  showScreen('screen-question');
+  renderQ();
+}
+
+function renderQ() {
+  const q = QUESTIONS[current];
+  const dimNames = ["維度一｜睡眠品質","維度二｜壓力管理","維度三｜身體活力","維度四｜飲食與水分","維度五｜社交與情緒"];
+
+  document.getElementById('progress-text').textContent = `第 ${current+1} 題，共 ${QUESTIONS.length} 題`;
+  const pct = Math.round(current / QUESTIONS.length * 100);
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('dim-label').textContent = dimNames[q.dim];
+  document.getElementById('q-number').textContent = `Q${current+1}`;
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('btn-back').style.visibility = current === 0 ? 'hidden' : 'visible';
+
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+  const letters = ['A','B','C','D','E'];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn' + (answers[current] === i ? ' selected' : '');
+    btn.innerHTML = `
+      <div class="option-icon">${letters[i]}</div>
+      <div class="option-content">
+        <div class="option-text">${opt.label}</div>
+      </div>
+      <div class="option-score-badge">${opt.score} 分</div>
+    `;
+    btn.onclick = () => selectOption(i);
+    list.appendChild(btn);
+  });
+
+  updateNextBtn();
+}
+
+function selectOption(i) {
+  answers[current] = i;
+  document.querySelectorAll('.option-btn').forEach((b, idx) => {
+    b.classList.toggle('selected', idx === i);
+  });
+  updateNextBtn();
+  setTimeout(() => {
+    if (current < QUESTIONS.length - 1) nextQ();
+    else showResult();
+  }, 320);
+}
+
+function updateNextBtn() {
+  const btn = document.getElementById('btn-next');
+  if (answers[current] !== null) {
+    btn.classList.add('enabled');
+    btn.textContent = current < QUESTIONS.length - 1 ? '繼續 →' : '查看結果 ✓';
+  } else {
+    btn.classList.remove('enabled');
+    btn.textContent = '繼續 →';
+  }
+}
+
+function nextQ() {
+  if (answers[current] === null) return;
+  if (current < QUESTIONS.length - 1) { current++; renderQ(); }
+  else showResult();
+}
+
+function prevQ() {
+  if (current > 0) { current--; renderQ(); }
+}
+
+function getDimScores() {
+  const scores = [0,0,0,0,0];
+  QUESTIONS.forEach((q, i) => {
+    if (answers[i] !== null) scores[q.dim] += q.options[answers[i]].score;
+  });
+  return scores;
+}
+
+function showResult() {
+  const dimScores = getDimScores();
+  const total = dimScores.reduce((a,b) => a+b, 0);
+  const level = getLevel(total);
+  const R = RESULTS[level];
+
+  showScreen('screen-result');
+
+  document.getElementById('result-badge').className = `result-badge-wrap ${R.cls}`;
+  document.getElementById('result-badge').textContent = R.badge;
+  document.getElementById('result-score').className = `result-score-big ${R.cls}`;
+  document.getElementById('result-score').textContent = total;
+  document.getElementById('result-title').textContent = R.title;
+  document.getElementById('result-desc').textContent = R.desc;
+
+  // Radar
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: DIMS.map(d => d.icon + ' ' + d.name),
+      datasets: [{
+        data: dimScores,
+        backgroundColor: 'rgba(74,124,158,0.18)',
+        borderColor: '#4A7C9E',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#4A7C9E',
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { r: {
+        min: 0, max: 12,
+        ticks: { display: false, stepSize: 4 },
+        grid: { color: 'rgba(0,0,0,0.07)' },
+        pointLabels: { font: { size: 12 }, color: '#2C3E50' }
+      }},
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Dim bars
+  const dimBars = document.getElementById('dim-bars');
+  dimBars.innerHTML = '';
+  dimScores.forEach((s, i) => {
+    const pct = Math.round(s / 12 * 100);
+    const d = DIMS[i];
+    dimBars.innerHTML += `
+      <div class="dim-bar-row">
+        <div class="dim-bar-name">${d.icon} ${d.name}</div>
+        <div class="dim-bar-wrap">
+          <div class="dim-bar-fill" style="width:${pct}%;background:${d.color}"></div>
+        </div>
+        <div class="dim-bar-score">${s}/12</div>
+      </div>`;
+  });
+
+  // Advice
+  document.getElementById('advice-content').innerHTML = R.advice;
+
+  // Share card
+  document.getElementById('sc-score').textContent = total;
+  document.getElementById('sc-label').textContent = R.title;
+  const scDims = document.getElementById('sc-dims');
+  scDims.innerHTML = '';
+  dimScores.forEach((s, i) => {
+    const d = DIMS[i];
+    scDims.innerHTML += `<div class="share-dim">
+      <div class="share-dim-icon">${d.icon}</div>
+      <div class="share-dim-name">${d.name}</div>
+      <div class="share-dim-val">${s}</div>
+    </div>`;
+  });
+}
+
+function shareResult() {
+  const dimScores = getDimScores();
+  const total = dimScores.reduce((a,b) => a+b, 0);
+  const level = getLevel(total);
+  const levelText = {green:'整體良好🟢',yellow:'需要關注🟡',orange:'壓力訊號🟠',red:'需要幫助🔴'};
+  const dimText = DIMS.map((d,i) => `${d.icon}${d.name}:${dimScores[i]}`).join(' ');
+  const text = `我做了五維度健康自評，總分 ${total}/60，${levelText[level]}\n${dimText}\n\n你也來評估看看自己最近的狀態 👉`;
+  if (navigator.share) {
+    navigator.share({ title: '五維度健康自我評估', text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('結果已複製，可貼到社群分享 ✓'));
+  }
+}
+
+function redoQuiz() { startQuiz(); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
